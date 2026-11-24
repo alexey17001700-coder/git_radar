@@ -525,10 +525,6 @@ $('list').addEventListener('click', e => {
   $('auto').value = String(a);
   NEWSET = new Set(store.get(K.new, []));
 
-  if (window.Notification && Notification.permission === 'default'){
-    Notification.requestPermission().catch(() => {});
-  }
-
   if (u){
     $('cfgCard').style.display = 'none';
     log('Владелец: ' + u, 'hi');
