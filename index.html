@@ -469,21 +469,34 @@ function render(){
                 '/zip/refs/heads/' + encodeURIComponent(br);
     const lang = r.language ? '<i>● ' + esc(r.language) + '</i>' : '';
     const stars = r.stargazers_count ? '<i>★ ' + r.stargazers_count + '</i>' : '';
+    const isCh = CHANGEDSET.has(r.full_name);
+    const snap = SAVED.get(r.full_name);
+    let snapMeta = '';
+    if (snap){
+      const sd = String(snap.saved_at || '').slice(0, 10);
+      snapMeta = '<i>💾 сохранено ' + esc(sd) + '</i>';
+      if (r.pushed_at && snap.pushed_at && new Date(r.pushed_at) > new Date(snap.pushed_at)){
+        snapMeta += '<i style="color:var(--red)">⚠ есть обновление</i>';
+      }
+    }
     return '' +
-    '<div class="repo' + (isNew ? ' is-new' : '') + '">' +
+    '<div class="repo' + (isNew ? ' is-new' : '') + (isCh ? ' is-ch' : '') + '">' +
       '<div class="r-top">' +
         '<div class="r-name">' + esc(r.name) + '</div>' +
         (isNew ? '<div class="badge n">НОВЫЙ</div>' : '') +
+        (isCh ? '<div class="badge ch">ОБНОВЛЁН</div>' : '') +
         (r.private ? '<div class="badge pv">🔒</div>' : '<div class="badge p">PUBLIC</div>') +
       '</div>' +
       (r.description ? '<div class="r-desc">' + esc(r.description) + '</div>' : '') +
       '<div class="r-meta">' +
         '<i>🕒 ' + ago(r.updated_at) + '</i>' + lang + stars +
-        '<i>🌿 ' + esc(br) + '</i>' +
+        '<i>🌿 ' + esc(br) + '</i>' + snapMeta +
       '</div>' +
       '<div class="r-acts">' +
         '<button class="b-gold b-sm" data-full="' + esc(r.full_name) + '">⬇ СКАЧАТЬ</button>' +
         '<button class="b-ghost b-sm" data-choose="' + esc(r.full_name) + '">📁 КУДА</button>' +
+        '<button class="b-dark b-sm" data-save="' + esc(r.full_name) + '" data-nm="' + esc(r.name) + '">💾 СОХРАНИТЬ</button>' +
+        (snap ? '<button class="b-ghost b-sm" data-restore="' + esc(r.full_name) + '">↺ ВОССТАНОВИТЬ</button>' : '') +
         '<button class="b-dark b-sm" data-open="' + esc(r.html_url) + '">GITHUB</button>' +
         (isNew ? '<button class="b-ghost b-sm" data-read="' + esc(r.full_name) + '">✓</button>' : '') +
       '</div>' +
