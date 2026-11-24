@@ -920,6 +920,11 @@ $('list').addEventListener('click', e => {
   if (b.dataset.full) openSheet(b.dataset.full);
   if (b.dataset.choose) openSheet(b.dataset.choose);
   if (b.dataset.open) window.open(b.dataset.open, '_blank', 'noopener');
+  if (b.dataset.save){
+    const r = REPOS.find(x => x.full_name === b.dataset.save);
+    if (r) saveSnapshot(r).catch(() => {});
+  }
+  if (b.dataset.restore) restoreSnapshot(b.dataset.restore).catch(() => {});
   if (b.dataset.read){
     const read = new Set(store.get(K.read, []));
     read.add(b.dataset.read);
