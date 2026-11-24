@@ -226,8 +226,7 @@ function toast(msg){
 }
 
 /* ── ЗАПРОС К GITHUB ── */
-async function api(path){
-  const token = store.get(K.token, '');
+async function api(path, token){
   const headers = { 'Accept': 'application/vnd.github+json' };
   if (token) headers['Authorization'] = 'Bearer ' + token;
   const r = await fetch('https://api.github.com' + path, { headers });
