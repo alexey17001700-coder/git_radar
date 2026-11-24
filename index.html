@@ -467,10 +467,131 @@ function render(){
   }).join('');
 }
 
-/* ── СКАЧИВАНИЕ ── */
-async function download(url, name){
-  log('Скачиваю: ' + name, 'hi');
+/* ═══════════════ КУДА СКАЧИВАТЬ ═══════════════ */
+const FS_OK = typeof window.showDirectoryPicker === 'function';
+const SAVEAS_OK = typeof window.showSaveFilePicker === 'function';
+let DIR = null;   // выбранная папка (FileSystemDirectoryHandle)
+
+/* ── IndexedDB: храним handle папки (в localStorage его не положить) ── */
+const idb = {
+  open(){
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('gitradar', 1);
+      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('h')) r.result.createObjectStore('h'); };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async get(k){
+    try {
+      const db = await this.open();
+      return await new Promise((res, rej) => {
+        const t = db.transaction('h', 'readonly').objectStore('h').get(k);
+        t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error);
+      });
+    } catch(e){ return null; }
+  },
+  async set(k, v){
+    try {
+      const db = await this.open();
+      await new Promise((res, rej) => {
+        const t = db.transaction('h', 'readwrite').objectStore('h').put(v, k);
+        t.onsuccess = () => res(); t.onerror = () => rej(t.error);
+      });
+    } catch(e){}
+  }
+};
+
+/* ── Показать состояние выбранной папки в интерфейсе ── */
+function showDir(){
+  const box = $('dirBox'), hint = $('dirHint'), btn = $('pickDir');
+  if (DIR){ box.style.display = 'flex'; $('dirName').textContent = DIR.name; }
+  else box.style.display = 'none';
+  if (!FS_OK){ btn.disabled = true; hint.style.display = 'block'; }
+  else { btn.disabled = false; hint.style.display = 'none'; }
+  btn.textContent = DIR ? '📁 СМЕНИТЬ ПАПКУ' : '📁 ПАПКА ДЛЯ СКАЧИВАНИЯ';
+}
+
+/* ── Восстановить папку после перезагрузки страницы ── */
+async function restoreDir(){
+  if (!FS_OK) return;
+  const h = await idb.get('dir');
+  if (!h) return;
+  try {
+    const p = await h.queryPermission({ mode: 'readwrite' });
+    if (p === 'granted'){ DIR = h; log('Папка для скачивания: ' + h.name, 'ok'); }
+  } catch(e){}
+  showDir();
+}
+
+/* ── Выбрать папку ── */
+async function pickDir(){
+  if (!FS_OK){ toast('Браузер не умеет выбирать папку'); return; }
+  try {
+    const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'gitradar' });
+    DIR = h;
+    await idb.set('dir', h);
+    showDir();
+    log('Папка для скачивания: ' + h.name, 'ok');
+    toast('📂 ' + h.name);
+  } catch(e){
+    if (e && e.name !== 'AbortError') toast('Не вышло: ' + e.message);
+  }
+}
+
+/* ── Сохранить прямо в выбранную папку ── */
+async function saveToDir(url, name){
+  if (!DIR) throw new Error('папка не выбрана');
+  let p = await DIR.queryPermission({ mode: 'readwrite' });
+  if (p !== 'granted') p = await DIR.requestPermission({ mode: 'readwrite' });
+  if (p !== 'granted') throw new Error('нет доступа к папке');
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const blob = await r.blob();
+  const fh = await DIR.getFileHandle(name + '.zip', { create: true });
+  const w = await fh.createWritable();
+  await w.write(blob);
+  await w.close();
+}
+
+/* ── «Сохранить как…» — выбрать имя и место ── */
+async function saveAs(url, name){
+  if (!SAVEAS_OK) throw new Error('браузер не поддерживает');
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const blob = await r.blob();
+  const fh = await window.showSaveFilePicker({
+    suggestedName: name + '.zip',
+    types: [{ description: 'ZIP архив', accept: { 'application/zip': ['.zip'] } }]
+  });
+  const w = await fh.createWritable();
+  await w.write(blob);
+  await w.close();
+}
+
+/* ── СКАЧИВАНИЕ (mode: auto | blob | dir | as) ── */
+async function download(url, name, mode){
+  mode = mode || 'auto';
+  if (mode === 'auto') mode = DIR ? 'dir' : 'blob';
+  const where = mode === 'dir' ? 'папка «' + (DIR ? DIR.name : '') + '»'
+              : mode === 'as'  ? 'выбор места'
+              : '«Загрузки»';
+  log('Скачиваю: ' + name + ' → ' + where, 'hi');
   toast('⬇ ' + name + '.zip');
+
+  if (mode === 'dir'){
+    try { await saveToDir(url, name); log('Готово: ' + name + '.zip → «' + DIR.name + '»', 'ok'); return; }
+    catch (e){ log('Папка не приняла (' + e.message + '), кладу в «Загрузки»', 'err'); }
+  }
+
+  if (mode === 'as'){
+    try { await saveAs(url, name); log('Готово: ' + name + '.zip', 'ok'); return; }
+    catch (e){
+      if (e && e.name === 'AbortError'){ log('Сохранение отменено', 'err'); return; }
+      log('Не вышло (' + e.message + '), кладу в «Загрузки»', 'err');
+    }
+  }
+
   try {
     const r = await fetch(url);
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -480,12 +601,63 @@ async function download(url, name){
                             { href: obj, download: name + '.zip' });
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(obj), 15000);
+    log('Готово: ' + name + '.zip → «Загрузки»', 'ok');
   } catch (e){
     log('Blob не вышел, открываю прямой ссылкой: ' + e.message, 'err');
     const a = Object.assign(document.createElement('a'),
                             { href: url, rel: 'noopener' });
     document.body.appendChild(a); a.click(); a.remove();
   }
+}
+
+/* ── Копирование в буфер ── */
+async function copy(text, msg){
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('📋 ' + msg); log(msg, 'ok');
+  } catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('📋 ' + msg); log(msg, 'ok'); }
+    catch(_){ toast('Не вышло скопировать'); }
+    ta.remove();
+  }
+}
+
+/* ── ЛИСТ ВЫБОРА «КУДА» ── */
+function closeSheet(){ $('sheet').classList.remove('on'); }
+
+function opt(ic, title, sub, act, url, name){
+  return '<button class="opt" data-act="' + act + '" data-url="' + esc(url) +
+    '" data-nm="' + esc(name) + '">' +
+    '<span class="oi">' + ic + '</span>' +
+    '<span class="ot"><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></span>' +
+    '</button>';
+}
+
+function openSheet(full){
+  const r = REPOS.find(x => x.full_name === full);
+  if (!r) return;
+  const br = r.default_branch || 'main';
+  const zip = 'https://codeload.github.com/' + r.full_name +
+              '/zip/refs/heads/' + encodeURIComponent(br);
+  const clone = 'https://github.com/' + r.full_name + '.git';
+
+  $('shName').textContent = r.name;
+  $('shSub').textContent = r.full_name + ' · ветка ' + br;
+
+  const o = [];
+  o.push(opt('⬇', 'В «Загрузки»', 'Обычное скачивание браузером', 'blob', zip, r.name));
+  if (DIR) o.push(opt('📂', 'В папку «' + DIR.name + '»', 'Сразу в выбранную папку, без диалога', 'dir', zip, r.name));
+  if (FS_OK) o.push(opt('🗂', DIR ? 'Выбрать другую папку' : 'Выбрать папку', 'Сохранить в папку на устройстве', 'pickdir', zip, r.name));
+  if (SAVEAS_OK) o.push(opt('💾', 'Сохранить как…', 'Выбрать имя файла и место', 'as', zip, r.name));
+  o.push(opt('🔗', 'Скопировать ссылку на ZIP', 'Вставить в загрузчик или другое приложение', 'copyzip', zip, r.name));
+  o.push(opt('⌨', 'Скопировать git clone', clone, 'copyclone', clone, r.name));
+  o.push(opt('🌐', 'Открыть на GitHub', r.html_url, 'open', r.html_url, r.name));
+
+  $('shOpts').innerHTML = o.join('');
+  $('sheet').classList.add('on');
 }
 
 async function downloadNew(){
