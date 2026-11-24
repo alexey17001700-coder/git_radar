@@ -484,7 +484,7 @@ function save(){
 
 /* ═══════════════ СОБЫТИЯ ═══════════════ */
 $('save').addEventListener('click', save);
-$('refresh').addEventListener('click', () => check(false));
+$('refresh').addEventListener('click', () => { ensureNotify(); check(false); });
 $('test').addEventListener('click', () => check(false));
 $('dlNew').addEventListener('click', downloadNew);
 $('filter').addEventListener('input', render);
