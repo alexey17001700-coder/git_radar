@@ -332,7 +332,9 @@ function notify(n){
 
 /* ── РАЗРЕШЕНИЕ НА УВЕДОМЛЕНИЯ (только по клику) ── */
 function ensureNotify(){
-  // разрешение на уведомления запрашивается только по клику (ensureNotify)
+  if (window.Notification && Notification.permission === 'default'){
+    Notification.requestPermission().catch(() => {});
+  }
 }
 
 /* ── ОТРИСОВКА ── */
