@@ -190,6 +190,16 @@
   <div class="row mt">
     <input id="filter" placeholder="🔍 поиск по названию..." autocomplete="off">
   </div>
+  <div class="row mt">
+    <button class="b-dark" id="pickDir">📁 ПАПКА ДЛЯ СКАЧИВАНИЯ</button>
+  </div>
+  <div class="folder mt" id="dirBox" style="display:none">
+    <span>📂</span><span>Сохраняю в: <b id="dirName">—</b></span>
+  </div>
+  <div class="hint" id="dirHint" style="display:none">
+    Этот браузер не умеет выбирать папку — файлы пойдут в «Загрузки».
+    Выбор папки работает в Chrome/Edge на компьютере.
+  </div>
 </div>
 
 <!-- СПИСОК -->
