@@ -255,7 +255,9 @@ async function fetchAll(user, token){
 /* ── ПРОВЕРКА ── */
 async function check(silent){
   if (busy) return;
-  const user = store.get(K.user, '').trim();
+  const cfgOpen = $('cfgCard').style.display !== 'none';
+  const user  = (cfgOpen ? $('user').value : store.get(K.user, '')).trim().replace(/^@/, '');
+  const token = cfgOpen ? $('token').value.trim() : store.get(K.token, '');
   if (!user){ if(!silent) toast('Сначала введи логин GitHub'); return; }
 
   busy = true;
