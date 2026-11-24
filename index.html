@@ -241,11 +241,11 @@ async function api(path, token){
 }
 
 /* ── ЗАГРУЗКА ВСЕХ РЕПОЗИТОРИЕВ (с пагинацией) ── */
-async function fetchAll(user){
+async function fetchAll(user, token){
   const out = [];
-  for (let page = 1; page <= 5; page++){
+  for (let page = 1; page <= 50; page++){
     const part = await api('/users/' + encodeURIComponent(user) +
-      '/repos?per_page=100&sort=updated&type=owner&page=' + page);
+      '/repos?per_page=100&sort=updated&type=owner&page=' + page, token);
     out.push(...part);
     if (part.length < 100) break;
   }
