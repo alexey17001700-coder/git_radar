@@ -574,7 +574,7 @@ function dbDelete(full_name){
 }
 
 /* только метаданные — blob'ы не тянем в память */
-function dbAll(){
+function dbAll(){ /* v3 */
   return DB.open().then(db => new Promise((res, rej) => {
     const out = [];
     const t = db.transaction('snapshots', 'readonly');
