@@ -409,16 +409,24 @@ function render(){
 }
 
 /* ── СКАЧИВАНИЕ ── */
-function download(url, name){
-  log('Скачиваю архив: ' + name, 'hi');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name + '.zip';
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+async function download(url, name){
+  log('Скачиваю: ' + name, 'hi');
   toast('⬇ ' + name + '.zip');
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    const obj  = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'),
+                            { href: obj, download: name + '.zip' });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(obj), 15000);
+  } catch (e){
+    log('Blob не вышел, открываю прямой ссылкой: ' + e.message, 'err');
+    const a = Object.assign(document.createElement('a'),
+                            { href: url, rel: 'noopener' });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
 }
 
 async function downloadNew(){
