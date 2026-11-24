@@ -330,6 +330,13 @@ function notify(n){
   document.title = n > 0 ? '(' + n + ') GIT РАДАР' : 'GIT РАДАР';
 }
 
+/* ── РАЗРЕШЕНИЕ НА УВЕДОМЛЕНИЯ (только по клику) ── */
+function ensureNotify(){
+  if (window.Notification && Notification.permission === 'default'){
+    Notification.requestPermission().catch(() => {});
+  }
+}
+
 /* ── ОТРИСОВКА ── */
 function ago(iso){
   const d = (Date.now() - new Date(iso).getTime()) / 1000;
