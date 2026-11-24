@@ -220,7 +220,7 @@
 </div>
 
 <div class="mini" id="verMark">
-  GIT РАДАР · работает прямо в браузере<br>
+  GIT РАДАР · v3 · локальные версии<br>
   Лимит GitHub без токена: 60 запросов/час
 </div>
 
@@ -241,6 +241,7 @@
 <script>
 /* ═══════════════════════════════════════════════════════════════
    GIT RADAR — отслеживание новых репозиториев GitHub
+   + локальные снимки версий (IndexedDB)
    ═══════════════════════════════════════════════════════════════ */
 const K = {
   user:  'gitradar_user',
@@ -469,20 +470,17 @@ function render(){
 
   box.innerHTML = list.map(r => {
     const isNew = NEWSET.has(r.full_name) && !read.has(r.full_name);
-    const br = r.default_branch || 'main';
-    const zip = 'https://codeload.github.com/' + r.full_name +
-                '/zip/refs/heads/' + encodeURIComponent(br);
-    const lang = r.language ? '<i>● ' + esc(r.language) + '</i>' : '';
-    const stars = r.stargazers_count ? '<i>★ ' + r.stargazers_count + '</i>' : '';
     const isCh = CHANGEDSET.has(r.full_name);
     const snap = SAVED.get(r.full_name);
+    const br = r.default_branch || 'main';
+    const lang = r.language ? '<i>● ' + esc(r.language) + '</i>' : '';
+    const stars = r.stargazers_count ? '<i>★ ' + r.stargazers_count + '</i>' : '';
     let snapMeta = '';
     if (snap){
-      const sd = String(snap.saved_at || '').slice(0, 10);
-      snapMeta = '<i>💾 сохранено ' + esc(sd) + '</i>';
-      if (r.pushed_at && snap.pushed_at && new Date(r.pushed_at) > new Date(snap.pushed_at)){
+      const d = String(snap.saved_at || '').slice(0,10);
+      snapMeta = '<i>💾 сохранено ' + d + '</i>';
+      if (snap.pushed_at && r.pushed_at && new Date(r.pushed_at) > new Date(snap.pushed_at))
         snapMeta += '<i style="color:var(--red)">⚠ есть обновление</i>';
-      }
     }
     return '' +
     '<div class="repo' + (isNew ? ' is-new' : '') + (isCh ? ' is-ch' : '') + '">' +
@@ -574,7 +572,7 @@ function dbDelete(full_name){
 }
 
 /* только метаданные — blob'ы не тянем в память */
-function dbAll(){ /* v3 */
+function dbAll(){
   return DB.open().then(db => new Promise((res, rej) => {
     const out = [];
     const t = db.transaction('snapshots', 'readonly');
@@ -901,7 +899,6 @@ $('sheet').addEventListener('click', async e => {
   if (act === 'copyclone') copy(url, 'Команда git clone скопирована');
   if (act === 'open')      window.open(url, '_blank', 'noopener');
 });
-// (дубликат обработчика листа удалён)
 
 $('markAll').addEventListener('click', () => {
   const read = new Set(store.get(K.read, []));
