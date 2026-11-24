@@ -437,9 +437,8 @@ async function downloadNew(){
   for (let i = 0; i < targets.length; i++){
     const r = targets[i];
     const br = r.default_branch || 'main';
-    download('https://codeload.github.com/' + r.full_name +
+    await download('https://codeload.github.com/' + r.full_name +
       '/zip/refs/heads/' + encodeURIComponent(br), r.name);
-    await new Promise(res => setTimeout(res, 900));
   }
 }
 
