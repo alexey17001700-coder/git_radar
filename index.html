@@ -324,6 +324,7 @@ async function check(silent){
     const repos = await fetchAll(user, token);
     REPOS = repos;
 
+    const alive = new Set(repos.map(r => r.full_name));
     const known = store.get(K.known, null);
     const read  = new Set(store.get(K.read, []));
 
