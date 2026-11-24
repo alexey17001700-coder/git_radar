@@ -534,15 +534,12 @@ $('list').addEventListener('click', e => {
     render();
   }
 
-  // кнопка «настройки» — долгий тап по логотипу
-  let holdT = null;
+  // кнопка «настройки» — тап по логотипу
   const logo = document.querySelector('.logo');
   const show = () => {
     const el = $('cfgCard');
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
   };
-  logo.addEventListener('touchstart', () => { holdT = setTimeout(show, 600); });
-  logo.addEventListener('touchend', () => clearTimeout(holdT));
   logo.addEventListener('click', show);
 })();
 </script>
