@@ -276,19 +276,24 @@ async function check(silent){
     if (known === null){
       // Первый запуск: запоминаем всё, ничего не помечаем новым
       store.set(K.known, repos.map(r => r.full_name));
+      store.set(K.new, []);
       NEWSET = new Set();
       log('Первый запуск: запомнил ' + repos.length + ' репозиториев', 'ok');
     } else {
       const kset = new Set(known);
-      NEWSET = new Set(repos.filter(r => !kset.has(r.full_name)).map(r => r.full_name));
-      if (NEWSET.size){
-        log('🆕 НОВЫХ РЕПОЗИТОРИЕВ: ' + NEWSET.size, 'hi');
-        NEWSET.forEach(n => log('   + ' + n, 'ok'));
-        notify(NEWSET.size);
+      const alive = new Set(repos.map(r => r.full_name));
+      const detected = repos.filter(r => !kset.has(r.full_name)).map(r => r.full_name);
+      const prevNew = new Set(store.get(K.new, []));
+      detected.forEach(n => prevNew.add(n));
+      NEWSET = new Set(Array.from(prevNew).filter(n => alive.has(n)));
+      store.set(K.new, Array.from(NEWSET));
+      if (detected.length){
+        log('🆕 НОВЫХ РЕПОЗИТОРИЕВ: ' + detected.length, 'hi');
+        detected.forEach(n => log('   + ' + n, 'ok'));
+        notify(detected.length);
       } else {
         log('Новых нет · всего ' + repos.length, 'ok');
       }
-      // дописываем в известные
       store.set(K.known, Array.from(new Set([...known, ...repos.map(r => r.full_name)])));
     }
 
