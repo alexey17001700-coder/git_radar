@@ -457,6 +457,7 @@ function setAuto(min){
 
 /* ── СОХРАНЕНИЕ НАСТРОЕК ── */
 function save(){
+  ensureNotify();
   const u = $('user').value.trim().replace(/^@/, '');
   if (!u){ toast('Введи логин GitHub'); return; }
   const prev = store.get(K.user, '');
@@ -466,6 +467,7 @@ function save(){
     // сменился владелец — сбрасываем историю
     store.set(K.known, null);
     store.set(K.read, []);
+    store.set(K.new, []);
     log('Смена владельца: ' + u + ' — история сброшена', 'hi');
   }
   log('Настройки сохранены: ' + u, 'ok');
