@@ -444,13 +444,14 @@ async function downloadNew(){
 
 /* ── АВТОПРОВЕРКА ── */
 function setAuto(min){
+  const prev = store.get(K.auto, 5);
   store.set(K.auto, min);
   $('auto').value = String(min);
   if (timer) clearInterval(timer);
   timer = null;
   if (min > 0){
     timer = setInterval(() => check(true), min * 60000);
-    log('Автопроверка: каждые ' + min + ' мин', 'ok');
+    if (prev !== min) log('Автопроверка: каждые ' + min + ' мин', 'ok');
   }
 }
 
