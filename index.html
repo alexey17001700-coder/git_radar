@@ -749,6 +749,7 @@ $('list').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.dataset.full) openSheet(b.dataset.full);
+  if (b.dataset.choose) openSheet(b.dataset.choose);
   if (b.dataset.open) window.open(b.dataset.open, '_blank', 'noopener');
   if (b.dataset.read){
     const read = new Set(store.get(K.read, []));
