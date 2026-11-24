@@ -665,12 +665,13 @@ async function downloadNew(){
   const read = new Set(store.get(K.read, []));
   const targets = REPOS.filter(r => NEWSET.has(r.full_name) && !read.has(r.full_name));
   if (!targets.length){ toast('Новых репозиториев нет'); return; }
-  log('Скачиваю ' + targets.length + ' новых архивов...', 'hi');
+  log('Скачиваю ' + targets.length + ' новых архивов → ' +
+      (DIR ? 'папка «' + DIR.name + '»' : '«Загрузки»'), 'hi');
   for (let i = 0; i < targets.length; i++){
     const r = targets[i];
     const br = r.default_branch || 'main';
     await download('https://codeload.github.com/' + r.full_name +
-      '/zip/refs/heads/' + encodeURIComponent(br), r.name);
+      '/zip/refs/heads/' + encodeURIComponent(br), r.name, 'auto').catch(() => {});
   }
 }
 
