@@ -716,6 +716,23 @@ $('test').addEventListener('click', () => check(false));
 $('dlNew').addEventListener('click', downloadNew);
 $('filter').addEventListener('input', render);
 $('auto').addEventListener('change', e => setAuto(parseInt(e.target.value, 10)));
+$('pickDir').addEventListener('click', pickDir);
+
+// лист выбора «куда скачать»
+$('sheet').addEventListener('click', e => {
+  if (e.target.closest('[data-close]')){ closeSheet(); return; }
+  const b = e.target.closest('.opt');
+  if (!b) return;
+  const act = b.dataset.act, url = b.dataset.url, nm = b.dataset.nm;
+  closeSheet();
+  if (act === 'blob')      download(url, nm, 'blob').catch(() => {});
+  if (act === 'dir')       download(url, nm, 'dir').catch(() => {});
+  if (act === 'as')        download(url, nm, 'as').catch(() => {});
+  if (act === 'pickdir')   pickDir().then(() => download(url, nm, 'dir')).catch(() => {});
+  if (act === 'copyzip')   copy(url, 'Ссылка на ZIP скопирована');
+  if (act === 'copyclone') copy(url, 'Команда git clone скопирована');
+  if (act === 'open')      window.open(url, '_blank', 'noopener');
+});
 
 $('markAll').addEventListener('click', () => {
   const read = new Set(store.get(K.read, []));
