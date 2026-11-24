@@ -250,6 +250,8 @@ const K = {
 const $ = id => document.getElementById(id);
 let REPOS = [];          // все репозитории с GitHub
 let NEWSET = new Set();  // full_name новых
+let CHANGEDSET = new Set(); // full_name репозиториев, у которых сменился pushed_at
+let SAVED = new Map();      // full_name → { saved_at, pushed_at, size }
 let timer = null;
 let busy = false;
 
