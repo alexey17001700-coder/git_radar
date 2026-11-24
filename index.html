@@ -913,6 +913,11 @@ $('markAll').addEventListener('click', () => {
   toast('Отмечено прочитанным');
 });
 
+// массовое сохранение / восстановление / очистка
+$('saveChanged').addEventListener('click', () => saveChanged().catch(() => {}));
+$('restoreAll').addEventListener('click', () => restoreAll().catch(() => {}));
+$('clearSaved').addEventListener('click', () => clearSaved().catch(() => {}));
+
 // делегирование кликов по кнопкам карточек
 $('list').addEventListener('click', e => {
   const b = e.target.closest('button');
