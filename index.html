@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A1220">
+<title>GIT РАДАР</title>
+<style>
+  :root{
+    --bg:#0A1220; --bg2:#0E1A2B; --card:#101E2E; --card2:#132438;
+    --line:#1B2C44; --line2:#243A56;
+    --text:#E8EEF6; --dim:#7E93AC; --faint:#4E6480;
+    --gold:#D4A537; --gold2:#F0C860; --green:#3FBF7F; --red:#E05C5C; --blue:#4A9EE8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  body{padding:14px 14px 90px;max-width:760px;margin:0 auto}
+
+  /* ── ШАПКА ── */
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .logo{width:48px;height:48px;border-radius:15px;flex:0 0 48px;
+    background:linear-gradient(135deg,#F0C860,#C08F22);display:flex;
+    align-items:center;justify-content:center;font-size:24px;
+    box-shadow:0 8px 22px rgba(212,165,55,.35)}
+  .ttl{font-size:19px;font-weight:800;letter-spacing:-.3px;line-height:1.15}
+  .sub{font-size:9.5px;font-weight:700;letter-spacing:1.6px;color:var(--gold);margin-top:3px}
+
+  /* ── КАРТОЧКИ ── */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px;margin-bottom:12px}
+  .lbl{font-size:9.5px;font-weight:800;letter-spacing:1.4px;color:var(--faint);
+    margin-bottom:7px;text-transform:uppercase}
+  input,select{width:100%;background:#000;border:1px solid var(--line2);
+    border-radius:11px;padding:12px 13px;color:var(--text);font-size:14px;
+    font-family:inherit;outline:none}
+  input:focus,select:focus{border-color:var(--gold)}
+  input::placeholder{color:#3E5A7C}
+  .row{display:flex;gap:9px}
+  .row>*{flex:1}
+  .mt{margin-top:9px}
+
+  /* ── КНОПКИ ── */
+  button{font-family:inherit;font-weight:800;letter-spacing:.7px;font-size:12.5px;
+    border:none;border-radius:12px;padding:13px 15px;cursor:pointer;
+    transition:transform .08s,opacity .15s}
+  button:active{transform:scale(.975)}
+  button:disabled{opacity:.45;cursor:default}
+  .b-gold{background:linear-gradient(135deg,#F0C860,#C08F22);color:#0A1220}
+  .b-ghost{background:transparent;color:var(--gold);border:1px solid rgba(212,165,55,.5)}
+  .b-dark{background:var(--card2);color:var(--text);border:1px solid var(--line2)}
+  .b-sm{padding:9px 12px;font-size:11px;border-radius:10px}
+  .full{width:100%}
+
+  /* ── СТАТИСТИКА ── */
+  .stats{display:flex;gap:9px;margin-bottom:12px}
+  .st{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:12px 10px;text-align:center}
+  .st b{display:block;font-size:22px;font-weight:800;line-height:1}
+  .st span{display:block;font-size:9px;font-weight:700;letter-spacing:1.1px;
+    color:var(--faint);margin-top:5px}
+  .st.new b{color:var(--gold)}
+  .st.all b{color:var(--blue)}
+
+  /* ── СПИСОК ── */
+  .repo{background:var(--card);border:1px solid var(--line);border-radius:15px;
+    padding:13px;margin-bottom:10px;position:relative;overflow:hidden}
+  .repo.is-new{border-color:rgba(212,165,55,.65);background:var(--card2)}
+  .repo.is-new::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:linear-gradient(180deg,#F0C860,#C08F22)}
+  .r-top{display:flex;align-items:flex-start;gap:9px}
+  .r-name{font-size:15px;font-weight:800;word-break:break-word;line-height:1.25;flex:1}
+  .badge{font-size:8.5px;font-weight:800;letter-spacing:1px;padding:4px 8px;
+    border-radius:20px;white-space:nowrap;flex:0 0 auto}
+  .badge.n{background:linear-gradient(135deg,#F0C860,#C08F22);color:#0A1220}
+  .badge.p{background:rgba(74,158,232,.16);color:var(--blue);
+    border:1px solid rgba(74,158,232,.4)}
+  .badge.pv{background:rgba(224,92,92,.14);color:var(--red);
+    border:1px solid rgba(224,92,92,.4)}
+  .r-desc{font-size:12px;color:var(--dim);line-height:1.45;margin:7px 0 0}
+  .r-meta{display:flex;flex-wrap:wrap;gap:11px;margin-top:9px;
+    font-size:10.5px;color:var(--faint);font-weight:600}
+  .r-meta i{font-style:normal}
+  .r-acts{display:flex;gap:8px;margin-top:11px}
+  .r-acts button{flex:1}
+
+  /* ── ПРОЧЕЕ ── */
+  .empty{text-align:center;padding:38px 18px;color:var(--faint);font-size:13px;line-height:1.6}
+  .empty .ic{font-size:38px;margin-bottom:12px;opacity:.5}
+  .log{background:#000;border:1px solid var(--line);border-radius:14px;
+    padding:12px;font-size:11px;line-height:1.75;max-height:150px;overflow-y:auto;
+    font-family:ui-monospace,Menlo,Consolas,monospace}
+  .log div{color:#6E819A;word-break:break-word}
+  .log div.ok{color:var(--green)}
+  .log div.err{color:var(--red)}
+  .log div.hi{color:var(--gold2)}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(212,165,55,.25);
+    border-top-color:var(--gold);border-radius:50%;animation:sp .7s linear infinite;
+    vertical-align:-2px;margin-right:7px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .hint{font-size:10.5px;color:var(--faint);line-height:1.5;margin-top:8px}
+  a{color:var(--gold);text-decoration:none}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,120px);
+    background:linear-gradient(135deg,#F0C860,#C08F22);color:#0A1220;
+    padding:13px 20px;border-radius:14px;font-size:13px;font-weight:800;
+    box-shadow:0 12px 34px rgba(0,0,0,.6);transition:transform .3s;z-index:99;
+    max-width:88vw;text-align:center}
+  .toast.on{transform:translate(-50%,0)}
+  .sep{height:1px;background:var(--line);margin:14px 0}
+  .mini{font-size:10px;color:var(--faint);text-align:center;margin-top:18px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="logo">📡</div>
+  <div>
+    <div class="ttl">GIT РАДАР</div>
+    <div class="sub">СЛЕЖУ ЗА РЕПОЗИТОРИЯМИ</div>
+  </div>
+</div>
+
+<!-- НАСТРОЙКИ -->
+<div class="card" id="cfgCard">
+  <div class="lbl">Владелец репозиториев</div>
+  <input id="user" placeholder="логин GitHub" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <div class="lbl mt" style="margin-top:12px">Токен (для приватных, не обязательно)</div>
+  <input id="token" type="password" placeholder="ghp_... — оставь пустым, если не нужно" autocomplete="off">
+  <div class="row mt">
+    <button class="b-gold" id="save">СОХРАНИТЬ</button>
+    <button class="b-ghost" id="test">ПРОВЕРИТЬ</button>
+  </div>
+  <div class="hint">Токен хранится только в этом браузере и никуда не отправляется, кроме api.github.com.</div>
+</div>
+
+<!-- СТАТИСТИКА -->
+<div class="stats" id="stats" style="display:none">
+  <div class="st new"><b id="sNew">0</b><span>НОВЫХ</span></div>
+  <div class="st all"><b id="sAll">0</b><span>ВСЕГО</span></div>
+  <div class="st"><b id="sTime" style="font-size:13px;padding-top:5px">—</b><span>ПРОВЕРКА</span></div>
+</div>
+
+<!-- УПРАВЛЕНИЕ -->
+<div class="card" id="ctrlCard" style="display:none">
+  <div class="row">
+    <button class="b-gold" id="refresh">ОБНОВИТЬ</button>
+    <button class="b-dark" id="dlNew">СКАЧАТЬ НОВЫЕ</button>
+  </div>
+  <div class="row mt">
+    <select id="auto">
+      <option value="0">Автопроверка: выкл</option>
+      <option value="1">Автопроверка: 1 мин</option>
+      <option value="5" selected>Автопроверка: 5 мин</option>
+      <option value="15">Автопроверка: 15 мин</option>
+      <option value="60">Автопроверка: 1 час</option>
+    </select>
+    <button class="b-ghost" id="markAll">ВСЁ ПРОЧИТАНО</button>
+  </div>
+  <div class="row mt">
+    <input id="filter" placeholder="🔍 поиск по названию..." autocomplete="off">
+  </div>
+</div>
+
+<!-- СПИСОК -->
+<div id="list"></div>
+
+<!-- ЛОГ -->
+<div class="card" id="logCard" style="display:none">
+  <div class="lbl">Журнал</div>
+  <div class="log" id="log"></div>
+</div>
+
+<div class="mini">
+  GIT РАДАР · работает прямо в браузере<br>
+  Лимит GitHub без токена: 60 запросов/час
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   GIT RADAR — отслеживание новых репозиториев GitHub
+   ═══════════════════════════════════════════════════════════════ */
+const K = {
+  user:  'gitradar_user',
+  token: 'gitradar_token',
+  known: 'gitradar_known',   // список full_name, которые уже видели
+  read:  'gitradar_read',    // какие из новых уже прочитаны
+  auto:  'gitradar_auto'
+};
+
+const $ = id => document.getElementById(id);
+let REPOS = [];          // все репозитории с GitHub
+let NEWSET = new Set();  // full_name новых
+let timer = null;
+let busy = false;
+
+/* ── ХРАНИЛИЩЕ ── */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+/* ── ЖУРНАЛ ── */
+function log(msg, cls){
+  const box = $('log');
+  $('logCard').style.display = 'block';
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  const t = new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  d.textContent = '[' + t + '] ' + msg;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  while (box.children.length > 120) box.removeChild(box.firstChild);
+}
+
+/* ── ВСПЛЫВАШКА ── */
+let toastT = null;
+function toast(msg){
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('on'), 2600);
+}
+
+/* ── ЗАПРОС К GITHUB ── */
+async function api(path){
+  const token = store.get(K.token, '');
+  const headers = { 'Accept': 'application/vnd.github+json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const r = await fetch('https://api.github.com' + path, { headers });
+  if (r.status === 404) throw new Error('не найдено — проверь логин');
+  if (r.status === 401) throw new Error('токен неверный или истёк');
+  if (r.status === 403) {
+    const left = r.headers.get('x-ratelimit-remaining');
+    throw new Error(left === '0' ? 'лимит запросов исчерпан, подожди час' : 'доступ запрещён');
+  }
+  if (!r.ok) throw new Error('ошибка GitHub: ' + r.status);
+  return r.json();
+}
+
+/* ── ЗАГРУЗКА ВСЕХ РЕПОЗИТОРИЕВ (с пагинацией) ── */
+async function fetchAll(user){
+  const out = [];
+  for (let page = 1; page <= 5; page++){
+    const part = await api('/users/' + encodeURIComponent(user) +
+      '/repos?per_page=100&sort=updated&type=owner&page=' + page);
+    out.push(...part);
+    if (part.length < 100) break;
+  }
+  return out;
+}
+
+/* ── ПРОВЕРКА ── */
+async function check(silent){
+  if (busy) return;
+  const user = store.get(K.user, '').trim();
+  if (!user){ if(!silent) toast('Сначала введи логин GitHub'); return; }
+
+  busy = true;
+  const btn = $('refresh');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>ПРОВЕРКА';
+  if (!silent) log('Запрос к GitHub: ' + user, 'hi');
+
+  try {
+    const repos = await fetchAll(user);
+    REPOS = repos;
+
+    const known = store.get(K.known, null);
+    const read  = new Set(store.get(K.read, []));
+
+    if (known === null){
+      // Первый запуск: запоминаем всё, ничего не помечаем новым
+      store.set(K.known, repos.map(r => r.full_name));
+      NEWSET = new Set();
+      log('Первый запуск: запомнил ' + repos.length + ' репозиториев', 'ok');
+    } else {
+      const kset = new Set(known);
+      NEWSET = new Set(repos.filter(r => !kset.has(r.full_name)).map(r => r.full_name));
+      if (NEWSET.size){
+        log('🆕 НОВЫХ РЕПОЗИТОРИЕВ: ' + NEWSET.size, 'hi');
+        NEWSET.forEach(n => log('   + ' + n, 'ok'));
+        notify(NEWSET.size);
+      } else {
+        log('Новых нет · всего ' + repos.length, 'ok');
+      }
+      // дописываем в известные
+      store.set(K.known, Array.from(new Set([...known, ...repos.map(r => r.full_name)])));
+    }
+
+    // чистим прочитанные, которых больше нет
+    const alive = new Set(repos.map(r => r.full_name));
+    store.set(K.read, Array.from(read).filter(n => alive.has(n)));
+
+    $('sTime').textContent = new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+    render();
+
+    if (!silent && NEWSET.size === 0) toast('Новых репозиториев нет');
+    if (!silent && NEWSET.size > 0) toast('🆕 Новых: ' + NEWSET.size);
+
+  } catch (e){
+    log('ОШИБКА: ' + e.message, 'err');
+    if (!silent) toast('Ошибка: ' + e.message);
+  }
+
+  busy = false;
+  btn.disabled = false;
+  btn.textContent = 'ОБНОВИТЬ';
+}
+
+/* ── УВЕДОМЛЕНИЕ ── */
+function notify(n){
+  try {
+    if (window.Notification && Notification.permission === 'granted'){
+      new Notification('GIT РАДАР', {
+        body: n === 1 ? 'Появился новый репозиторий!' : 'Новых репозиториев: ' + n,
+        tag: 'gitradar'
+      });
+    }
+  } catch(e){}
+  document.title = n > 0 ? '(' + n + ') GIT РАДАР' : 'GIT РАДАР';
+}
+
+/* ── ОТРИСОВКА ── */
+function ago(iso){
+  const d = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (d < 60) return 'только что';
+  if (d < 3600) return Math.floor(d/60) + ' мин назад';
+  if (d < 86400) return Math.floor(d/3600) + ' ч назад';
+  if (d < 2592000) return Math.floor(d/86400) + ' дн назад';
+  return new Date(iso).toLocaleDateString('ru-RU');
+}
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function render(){
+  const read = new Set(store.get(K.read, []));
+  const q = $('filter').value.trim().toLowerCase();
+
+  // новые и непрочитанные
+  const unread = REPOS.filter(r => NEWSET.has(r.full_name) && !read.has(r.full_name));
+  $('sNew').textContent = unread.length;
+  $('sAll').textContent = REPOS.length;
+  $('stats').style.display = REPOS.length ? 'flex' : 'none';
+  $('ctrlCard').style.display = REPOS.length ? 'block' : 'none';
+
+  let list = REPOS.slice();
+  if (q) list = list.filter(r =>
+    r.name.toLowerCase().includes(q) ||
+    (r.description || '').toLowerCase().includes(q));
+
+  // сортировка: новые сверху, потом по дате обновления
+  list.sort((a, b) => {
+    const an = NEWSET.has(a.full_name) ? 1 : 0;
+    const bn = NEWSET.has(b.full_name) ? 1 : 0;
+    if (an !== bn) return bn - an;
+    return new Date(b.updated_at) - new Date(a.updated_at);
+  });
+
+  const box = $('list');
+  if (!list.length){
+    box.innerHTML = '<div class="empty"><div class="ic">' +
+      (REPOS.length ? '🔍' : '📡') + '</div>' +
+      (REPOS.length ? 'Ничего не найдено по запросу' :
+        'Введи логин GitHub и нажми «СОХРАНИТЬ»') + '</div>';
+    return;
+  }
+
+  box.innerHTML = list.map(r => {
+    const isNew = NEWSET.has(r.full_name) && !read.has(r.full_name);
+    const br = r.default_branch || 'main';
+    const zip = 'https://codeload.github.com/' + r.full_name +
+                '/zip/refs/heads/' + encodeURIComponent(br);
+    const lang = r.language ? '<i>● ' + esc(r.language) + '</i>' : '';
+    const stars = r.stargazers_count ? '<i>★ ' + r.stargazers_count + '</i>' : '';
+    return '' +
+    '<div class="repo' + (isNew ? ' is-new' : '') + '">' +
+      '<div class="r-top">' +
+        '<div class="r-name">' + esc(r.name) + '</div>' +
+        (isNew ? '<div class="badge n">НОВЫЙ</div>' : '') +
+        (r.private ? '<div class="badge pv">🔒</div>' : '<div class="badge p">PUBLIC</div>') +
+      '</div>' +
+      (r.description ? '<div class="r-desc">' + esc(r.description) + '</div>' : '') +
+      '<div class="r-meta">' +
+        '<i>🕒 ' + ago(r.updated_at) + '</i>' + lang + stars +
+        '<i>🌿 ' + esc(br) + '</i>' +
+      '</div>' +
+      '<div class="r-acts">' +
+        '<button class="b-gold b-sm" data-zip="' + esc(zip) + '" data-nm="' + esc(r.name) + '">⬇ СКАЧАТЬ</button>' +
+        '<button class="b-dark b-sm" data-open="' + esc(r.html_url) + '">GITHUB</button>' +
+        (isNew ? '<button class="b-ghost b-sm" data-read="' + esc(r.full_name) + '">✓</button>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ── СКАЧИВАНИЕ ── */
+function download(url, name){
+  log('Скачиваю архив: ' + name, 'hi');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name + '.zip';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('⬇ ' + name + '.zip');
+}
+
+async function downloadNew(){
+  const read = new Set(store.get(K.read, []));
+  const targets = REPOS.filter(r => NEWSET.has(r.full_name) && !read.has(r.full_name));
+  if (!targets.length){ toast('Новых репозиториев нет'); return; }
+  log('Скачиваю ' + targets.length + ' новых архивов...', 'hi');
+  for (let i = 0; i < targets.length; i++){
+    const r = targets[i];
+    const br = r.default_branch || 'main';
+    download('https://codeload.github.com/' + r.full_name +
+      '/zip/refs/heads/' + encodeURIComponent(br), r.name);
+    await new Promise(res => setTimeout(res, 900));
+  }
+}
+
+/* ── АВТОПРОВЕРКА ── */
+function setAuto(min){
+  store.set(K.auto, min);
+  $('auto').value = String(min);
+  if (timer) clearInterval(timer);
+  timer = null;
+  if (min > 0){
+    timer = setInterval(() => check(true), min * 60000);
+    log('Автопроверка: каждые ' + min + ' мин', 'ok');
+  }
+}
+
+/* ── СОХРАНЕНИЕ НАСТРОЕК ── */
+function save(){
+  const u = $('user').value.trim().replace(/^@/, '');
+  if (!u){ toast('Введи логин GitHub'); return; }
+  const prev = store.get(K.user, '');
+  store.set(K.user, u);
+  store.set(K.token, $('token').value.trim());
+  if (prev !== u){
+    // сменился владелец — сбрасываем историю
+    store.set(K.known, null);
+    store.set(K.read, []);
+    log('Смена владельца: ' + u + ' — история сброшена', 'hi');
+  }
+  log('Настройки сохранены: ' + u, 'ok');
+  toast('Сохранено');
+  check(false);
+}
+
+/* ═══════════════ СОБЫТИЯ ═══════════════ */
+$('save').addEventListener('click', save);
+$('refresh').addEventListener('click', () => check(false));
+$('test').addEventListener('click', () => check(false));
+$('dlNew').addEventListener('click', downloadNew);
+$('filter').addEventListener('input', render);
+$('auto').addEventListener('change', e => setAuto(parseInt(e.target.value, 10)));
+
+$('markAll').addEventListener('click', () => {
+  const read = new Set(store.get(K.read, []));
+  NEWSET.forEach(n => read.add(n));
+  store.set(K.read, Array.from(read));
+  document.title = 'GIT РАДАР';
+  render();
+  toast('Отмечено прочитанным');
+});
+
+// делегирование кликов по кнопкам карточек
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.zip)  download(b.dataset.zip, b.dataset.nm);
+  if (b.dataset.open) window.open(b.dataset.open, '_blank', 'noopener');
+  if (b.dataset.read){
+    const read = new Set(store.get(K.read, []));
+    read.add(b.dataset.read);
+    store.set(K.read, Array.from(read));
+    render();
+  }
+});
+
+/* ═══════════════ СТАРТ ═══════════════ */
+(function init(){
+  const u = store.get(K.user, '');
+  $('user').value = u;
+  $('token').value = store.get(K.token, '');
+  const a = store.get(K.auto, 5);
+  $('auto').value = String(a);
+
+  if (window.Notification && Notification.permission === 'default'){
+    Notification.requestPermission().catch(() => {});
+  }
+
+  if (u){
+    $('cfgCard').style.display = 'none';
+    log('Владелец: ' + u, 'hi');
+    check(true);
+    if (a > 0) setAuto(a);
+  } else {
+    render();
+  }
+
+  // кнопка «настройки» — долгий тап по логотипу
+  let holdT = null;
+  const logo = document.querySelector('.logo');
+  const show = () => { $('cfgCard').style.display = 'block'; };
+  logo.addEventListener('touchstart', () => { holdT = setTimeout(show, 600); });
+  logo.addEventListener('touchend', () => clearTimeout(holdT));
+  logo.addEventListener('click', show);
+})();
+</script>
+</body>
+</html>
