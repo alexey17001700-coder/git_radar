@@ -950,6 +950,7 @@ $('list').addEventListener('click', e => {
   NEWSET = new Set(store.get(K.new, []));
   showDir();
   restoreDir();
+  refreshSaved().then(() => render()).catch(() => {});
 
   if (u){
     $('cfgCard').style.display = 'none';
