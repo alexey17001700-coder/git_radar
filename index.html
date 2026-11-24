@@ -356,6 +356,23 @@ async function check(silent){
       store.set(K.known, Array.from(new Set([...known, ...repos.map(r => r.full_name)])));
     }
 
+    // ── обнаружение изменений в известных репозиториях (pushed_at) ──
+    const prevChanged = store.get(K.changed, {});
+    const changedNow = {};
+    if (known !== null){
+      repos.forEach(r => {
+        if (prevChanged[r.full_name] && prevChanged[r.full_name] !== r.pushed_at){
+          changedNow[r.full_name] = r.pushed_at;
+        }
+      });
+    }
+    store.set(K.changed, Object.fromEntries(repos.map(r => [r.full_name, r.pushed_at])));
+    CHANGEDSET = new Set(Object.keys(changedNow));
+    if (CHANGEDSET.size){
+      log('🔄 ОБНОВЛЕНО РЕПОЗИТОРИЕВ: ' + CHANGEDSET.size, 'hi');
+      CHANGEDSET.forEach(n => log('   ~ ' + n, 'ok'));
+    }
+
     // чистим прочитанные, которых больше нет
     store.set(K.read, Array.from(read).filter(n => alive.has(n)));
 
