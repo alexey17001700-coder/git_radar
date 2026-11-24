@@ -775,6 +775,69 @@ async function downloadNew(){
   }
 }
 
+/* ── СОХРАНИТЬ ВЕРСИЮ В БРАУЗЕР (IndexedDB) ── */
+async function saveSnapshot(r){
+  const br = r.default_branch || 'main';
+  const url = 'https://codeload.github.com/' + r.full_name + '/zip/refs/heads/' + encodeURIComponent(br);
+  log('Сохраняю ' + r.name + '...', 'hi');
+  toast('💾 ' + r.name);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    await dbPut({ full_name: r.full_name, name: r.name, saved_at: new Date().toISOString(), pushed_at: r.pushed_at, blob });
+    await refreshSaved();
+    log('Сохранено: ' + r.name + ' (' + Math.round(blob.size/1024) + ' КБ)', 'ok');
+    toast('💾 Сохранено: ' + r.name);
+    render();
+  } catch (e){
+    log('Ошибка сохранения: ' + e.message, 'err');
+    toast('Ошибка: ' + e.message);
+  }
+}
+
+/* ── ВОССТАНОВИТЬ СОХРАНЁННУЮ ВЕРСИЮ ── */
+async function restoreSnapshot(full_name){
+  const rec = await dbGet(full_name);
+  if (!rec){ toast('Нет сохранённой версии'); return; }
+  const obj = URL.createObjectURL(rec.blob);
+  const stamp = String(rec.saved_at || '').slice(0, 10);
+  const a = Object.assign(document.createElement('a'), { href: obj, download: rec.name + '_' + stamp + '.zip' });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(obj), 15000);
+  log('Восстановлено: ' + rec.name + ' от ' + stamp, 'ok');
+  toast('↺ ' + rec.name + ' от ' + stamp);
+}
+
+/* ── СОХРАНИТЬ ВСЕ ОБНОВЛЁННЫЕ ── */
+async function saveChanged(){
+  const targets = REPOS.filter(r => CHANGEDSET.has(r.full_name) && !SAVED.has(r.full_name));
+  if (!targets.length){ toast('Нечего сохранять'); return; }
+  log('Сохраняю обновлённые: ' + targets.length, 'hi');
+  for (const r of targets) await saveSnapshot(r);
+}
+
+/* ── ВОССТАНОВИТЬ ВСЁ ── */
+async function restoreAll(){
+  const all = await dbAll();
+  if (!all.length){ toast('Нет сохранённых версий'); return; }
+  log('Восстанавливаю ' + all.length + ' архивов...', 'hi');
+  for (const rec of all){
+    await restoreSnapshot(rec.full_name);
+    await new Promise(res => setTimeout(res, 300));
+  }
+}
+
+/* ── ОЧИСТИТЬ СОХРАНЁННЫЕ ── */
+async function clearSaved(){
+  if (!confirm('Удалить все сохранённые версии?')) return;
+  await dbClear();
+  SAVED = new Map();
+  log('Сохранённые версии удалены', 'hi');
+  toast('🗑 Очищено');
+  render();
+}
+
 /* ── АВТОПРОВЕРКА ── */
 function setAuto(min){
   const prev = store.get(K.auto, 5);
