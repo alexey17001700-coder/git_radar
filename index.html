@@ -267,7 +267,7 @@ async function check(silent){
   if (!silent) log('Запрос к GitHub: ' + user, 'hi');
 
   try {
-    const repos = await fetchAll(user);
+    const repos = await fetchAll(user, token);
     REPOS = repos;
 
     const known = store.get(K.known, null);
