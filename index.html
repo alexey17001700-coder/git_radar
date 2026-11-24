@@ -483,8 +483,9 @@ $('auto').addEventListener('change', e => setAuto(parseInt(e.target.value, 10)))
 
 $('markAll').addEventListener('click', () => {
   const read = new Set(store.get(K.read, []));
-  NEWSET.forEach(n => read.add(n));
+  NEWSET.forEach(n => { read.add(n); NEWSET.delete(n); });
   store.set(K.read, Array.from(read));
+  store.set(K.new, Array.from(NEWSET));
   document.title = 'GIT РАДАР';
   render();
   toast('Отмечено прочитанным');
