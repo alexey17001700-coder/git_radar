@@ -352,6 +352,7 @@ function render(){
 
   // новые и непрочитанные
   const unread = REPOS.filter(r => NEWSET.has(r.full_name) && !read.has(r.full_name));
+  document.title = unread.length ? '(' + unread.length + ') GIT РАДАР' : 'GIT РАДАР';
   $('sNew').textContent = unread.length;
   $('sAll').textContent = REPOS.length;
   $('stats').style.display = REPOS.length ? 'flex' : 'none';
