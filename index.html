@@ -750,9 +750,8 @@ $('list').addEventListener('click', e => {
   $('token').value = store.get(K.token, '');
   const a = store.get(K.auto, 5);
   $('auto').value = String(a);
-  $('dest').value = destMode();
   NEWSET = new Set(store.get(K.new, []));
-  updateDirLabel();
+  showDir();
   restoreDir();
 
   if (u){
