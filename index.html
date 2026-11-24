@@ -352,7 +352,6 @@ async function check(silent){
     }
 
     // чистим прочитанные, которых больше нет
-    const alive = new Set(repos.map(r => r.full_name));
     store.set(K.read, Array.from(read).filter(n => alive.has(n)));
 
     $('sTime').textContent = new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
