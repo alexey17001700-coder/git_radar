@@ -509,7 +509,9 @@ $('list').addEventListener('click', e => {
   if (b.dataset.read){
     const read = new Set(store.get(K.read, []));
     read.add(b.dataset.read);
+    NEWSET.delete(b.dataset.read);
     store.set(K.read, Array.from(read));
+    store.set(K.new, Array.from(NEWSET));
     render();
   }
 });
