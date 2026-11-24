@@ -479,35 +479,99 @@ const FS_OK = typeof window.showDirectoryPicker === 'function';
 const SAVEAS_OK = typeof window.showSaveFilePicker === 'function';
 let DIR = null;   // выбранная папка (FileSystemDirectoryHandle)
 
-/* ── IndexedDB: храним handle папки (в localStorage его не положить) ── */
-const idb = {
+/* ── IndexedDB: папка + снимки версий ── */
+const DB = {
+  _p: null,
   open(){
-    return new Promise((res, rej) => {
-      const r = indexedDB.open('gitradar', 1);
-      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('h')) r.result.createObjectStore('h'); };
+    if (this._p) return this._p;
+    this._p = new Promise((res, rej) => {
+      let r;
+      try { r = indexedDB.open('gitradar', 2); }
+      catch(e){ rej(e); return; }
+      r.onupgradeneeded = () => {
+        const db = r.result;
+        if (!db.objectStoreNames.contains('h')) db.createObjectStore('h');
+        if (!db.objectStoreNames.contains('snapshots'))
+          db.createObjectStore('snapshots', { keyPath: 'full_name' });
+      };
       r.onsuccess = () => res(r.result);
-      r.onerror = () => rej(r.error);
+      r.onerror   = () => rej(r.error);
+      r.onblocked = () => rej(new Error('база занята другой вкладкой'));
     });
+    return this._p;
   },
-  async get(k){
-    try {
-      const db = await this.open();
-      return await new Promise((res, rej) => {
-        const t = db.transaction('h', 'readonly').objectStore('h').get(k);
-        t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error);
-      });
-    } catch(e){ return null; }
-  },
-  async set(k, v){
-    try {
-      const db = await this.open();
-      await new Promise((res, rej) => {
-        const t = db.transaction('h', 'readwrite').objectStore('h').put(v, k);
-        t.onsuccess = () => res(); t.onerror = () => rej(t.error);
-      });
-    } catch(e){}
+  _tx(store, mode, fn){
+    return this.open().then(db => new Promise((res, rej) => {
+      const t = db.transaction(store, mode);
+      const s = t.objectStore(store);
+      let out;
+      const req = fn(s);
+      if (req) req.onsuccess = () => { out = req.result; };
+      t.oncomplete = () => res(out);
+      t.onerror    = () => rej(t.error);
+      t.onabort    = () => rej(t.error);
+    }));
   }
 };
+
+/* ── обёртка над хранилищем 'h' (handle папки) ── */
+const idb = {
+  get(k){ return DB._tx('h', 'readonly', s => s.get(k)).catch(() => null); },
+  set(k, v){ return DB._tx('h', 'readwrite', s => s.put(v, k)).catch(() => {}); }
+};
+
+/* ── СНИМКИ ВЕРСИЙ (таблица snapshots) ── */
+function dbOpen(){ return DB.open(); }
+
+function dbPut(rec){
+  return DB._tx('snapshots', 'readwrite', s => s.put(rec))
+    .catch(e => { log('IndexedDB: ' + e.message, 'err'); throw e; });
+}
+
+function dbGet(full_name){
+  return DB._tx('snapshots', 'readonly', s => s.get(full_name))
+    .catch(e => { log('IndexedDB: ' + e.message, 'err'); return null; });
+}
+
+function dbDelete(full_name){
+  return DB._tx('snapshots', 'readwrite', s => s.delete(full_name))
+    .catch(e => { log('IndexedDB: ' + e.message, 'err'); });
+}
+
+/* только метаданные — blob'ы не тянем в память */
+function dbAll(){
+  return DB.open().then(db => new Promise((res, rej) => {
+    const out = [];
+    const t = db.transaction('snapshots', 'readonly');
+    const req = t.objectStore('snapshots').openCursor();
+    req.onsuccess = () => {
+      const c = req.result;
+      if (c){
+        const v = c.value;
+        out.push({
+          full_name: v.full_name, name: v.name,
+          saved_at: v.saved_at, pushed_at: v.pushed_at,
+          size: v.blob ? v.blob.size : 0
+        });
+        c.continue();
+      }
+    };
+    t.oncomplete = () => res(out);
+    t.onerror    = () => rej(t.error);
+  })).catch(e => { log('IndexedDB: ' + e.message, 'err'); return []; });
+}
+
+function dbClear(){
+  return DB._tx('snapshots', 'readwrite', s => s.clear())
+    .catch(e => { log('IndexedDB: ' + e.message, 'err'); });
+}
+
+/* ── пересобрать SAVED из базы ── */
+async function refreshSaved(){
+  const all = await dbAll();
+  SAVED = new Map(all.map(r => [r.full_name, r]));
+  return SAVED;
+}
 
 /* ── Показать состояние выбранной папки в интерфейсе ── */
 function showDir(){
