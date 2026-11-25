@@ -329,10 +329,30 @@ function toast(msg){
   toastT = setTimeout(() => el.classList.remove('on'), 2600);
 }
 
-/* ── ЗАПРОС К GITHUB ── */
+/* ── АДРЕС ПРОКСИ ШТАБА ── */
+const SHTAB_PROXY = 'https://shtab-boss.duckdns.org:8443/api/github';
+
+/* ── ЗАПРОС К GITHUB ──
+   Сначала идём через прокси Штаба: токен GitHub остаётся на сервере,
+   в браузере лежит только ключ радара. Прокси недоступен — падаем
+   на прямой запрос (как раньше), чтобы радар не вставал. */
 async function api(path, token){
+  const key = (token || '').trim();
+  if (key){
+    try {
+      const pr = await fetch(SHTAB_PROXY + path, { headers: { 'X-Gitradar-Token': key } });
+      if (pr.ok) return pr.json();
+      if (pr.status === 404) throw new Error('не найдено — проверь логин');
+      if (pr.status === 401) throw new Error('ключ радара неверный (или прокси выключен)');
+      if (pr.status === 403) throw new Error('прокси Штаба: путь запрещён');
+      if (pr.status === 500) throw new Error('на сервере Штаба не задан GITRADAR_TOKEN');
+    } catch(e){
+      // сеть/прокси недоступны — пробуем напрямую, как раньше
+      if (e && e.message && !/Failed to fetch|NetworkError|Load failed|fetch/i.test(e.message)) throw e;
+    }
+  }
   const headers = { 'Accept': 'application/vnd.github+json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
+  if (key) headers['Authorization'] = 'Bearer ' + key;
   const r = await fetch('https://api.github.com' + path, { headers });
   if (r.status === 404) throw new Error('не найдено — проверь логин');
   if (r.status === 401) throw new Error('токен неверный или истёк');
