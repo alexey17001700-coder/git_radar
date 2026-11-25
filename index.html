@@ -1328,6 +1328,64 @@ $('list').addEventListener('click', e => {
   }
 });
 
+// окно отката: файлы коммита и подгрузка следующих 100
+$('modalBody').addEventListener('click', async e => {
+  // 📄 — показать файлы коммита
+  const fb = e.target.closest('[data-files]');
+  if (fb){
+    e.preventDefault(); e.stopPropagation();
+    if (!RB) return;
+    const c = RB.commits[parseInt(fb.dataset.files, 10)];
+    fb.disabled = true; fb.textContent = '…';
+    try {
+      const files = await commitFiles(RB.full, c.sha);
+      const dart = files.filter(f => /\.dart$/.test(f.path)).length;
+      const hasLib = files.some(f => /^lib\//.test(f.path));
+      const head = files.length
+        ? files.slice(0, 45).map(f => '· ' + f.path).join('\n')
+        : '(файлов нет)';
+      log('📄 ' + c.sha.slice(0,7) + ': файлов ' + files.length +
+        (hasLib ? ' · ЕСТЬ lib/ (' + dart + ' .dart)' : ' · папки lib/ НЕТ'), hasLib ? 'ok' : '');
+      alert('КОММИТ ' + c.sha.slice(0,7) + '\n' +
+        'ФАЙЛОВ: ' + files.length + '\n' +
+        (hasLib ? '✅ ЕСТЬ ПАПКА lib/ — .dart файлов: ' + dart : '❌ папки lib/ НЕТ — кода нет') +
+        '\n\n' + head + (files.length > 45 ? '\n…' : ''));
+      fb.textContent = hasLib ? '✅' : '📄';
+    } catch(err){
+      toast('Ошибка: ' + err.message);
+      fb.textContent = '📄';
+    }
+    fb.disabled = false;
+    return;
+  }
+
+  // ПОКАЗАТЬ ЕЩЁ 100
+  const mb = e.target.closest('#rbMore');
+  if (mb && RB){
+    mb.disabled = true; mb.textContent = 'ЗАГРУЖАЮ...';
+    const checked = document.querySelector('input[name="rc"]:checked');
+    const keep = checked ? checked.value : null;
+    try {
+      const next = await listCommits(RB.full, RB.branch, RB.page + 1);
+      RB.page++;
+      RB.commits = RB.commits.concat(next);
+      RB.done = next.length < 100;
+      $('rbList').innerHTML = rbList();
+      const cnt = $('rbCount'); if (cnt) cnt.textContent = String(RB.commits.length);
+      if (keep !== null){
+        const back = document.querySelector('input[name="rc"][value="' + keep + '"]');
+        if (back) back.checked = true;
+      }
+      if (RB.done){ mb.style.display = 'none'; }
+      else { mb.disabled = false; mb.textContent = 'ПОКАЗАТЬ ЕЩЁ 100'; }
+      log('Коммитов показано: ' + RB.commits.length, 'ok');
+    } catch(err){
+      toast('Ошибка: ' + err.message);
+      mb.disabled = false; mb.textContent = 'ПОКАЗАТЬ ЕЩЁ 100';
+    }
+  }
+});
+
 /* ═══════════════ СТАРТ ═══════════════ */
 (function init(){
   const u = store.get(K.user, '');
