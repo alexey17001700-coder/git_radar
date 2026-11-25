@@ -1030,6 +1030,91 @@ async function restoreFile(full_name){
   });
 }
 
+/* ═══════════════ ОТКАТ ДО КОММИТА ═══════════════ */
+
+/* ── список коммитов ветки ── */
+async function listCommits(full, branch){
+  const [owner, repo] = full.split('/');
+  const path = '/repos/' + owner + '/' + repo + '/commits?sha=' +
+    encodeURIComponent(branch) + '&per_page=30';
+  const arr = await writeApi(path, 'GET');
+  return Array.isArray(arr) ? arr : [];
+}
+
+/* ── откат: новый коммит с деревом выбранного коммита ──
+   История НЕ переписывается: поверх головы ветки создаётся новый
+   коммит, дерево которого = дерево выбранного коммита. Откат обратим. */
+async function doRollback(full, branch, sha, label){
+  const [owner, repo] = full.split('/');
+  const base = '/repos/' + owner + '/' + repo;
+  log('Откат ' + full + ' → ' + sha.slice(0,7) + '...', 'hi');
+
+  // 1. дерево целевого коммита
+  const target = await writeApi(base + '/git/commits/' + sha);
+  const targetTree = target && target.tree && target.tree.sha;
+  if (!targetTree) throw new Error('не получил дерево коммита');
+
+  // 2. текущая голова ветки
+  const ref = await writeApi(base + '/git/ref/heads/' + encodeURIComponent(branch));
+  const headSha = ref && ref.object && ref.object.sha;
+  if (!headSha) throw new Error('не получил голову ветки');
+
+  // 3. новый коммит поверх головы с деревом цели
+  const msg = 'rollback: возврат к ' + sha.slice(0,7) + (label ? ' (' + label + ')' : '');
+  const nc = await writeApi(base + '/git/commits', 'POST', {
+    message: msg, tree: targetTree, parents: [headSha]
+  });
+  const newSha = nc && nc.sha;
+  if (!newSha) throw new Error('коммит не создан');
+
+  // 4. двигаем ветку на новый коммит
+  await writeApi(base + '/git/refs/heads/' + encodeURIComponent(branch), 'PATCH', {
+    sha: newSha, force: false
+  });
+
+  log('✅ Откат выполнен: ' + newSha.slice(0,7), 'ok');
+  toast('✅ Откат к ' + sha.slice(0,7));
+  return newSha;
+}
+
+/* ── окно выбора коммита ── */
+async function rollbackToCommit(full_name){
+  const r = REPOS.find(x => x.full_name === full_name);
+  const branch = (r && r.default_branch) || 'main';
+  let commits;
+  try { commits = await listCommits(full_name, branch); }
+  catch(e){ log('Не получил коммиты: ' + e.message, 'err'); toast('Ошибка: ' + e.message); return; }
+  if (!commits.length){ toast('Коммитов нет'); return; }
+
+  const list = commits.map((c, i) => {
+    const sha = c.sha || '';
+    const msg = (c.commit && c.commit.message ? c.commit.message.split('\n')[0] : '(без сообщения)');
+    const who = (c.commit && c.commit.author && c.commit.author.name) || '';
+    const when = (c.commit && c.commit.author && c.commit.author.date)
+      ? new Date(c.commit.author.date).toLocaleString('ru-RU') : '';
+    return '<label><input type="radio" name="rc" value="' + i + '">' +
+      '<span><b>' + esc(sha.slice(0,7)) + '</b> · ' + esc(msg) +
+      '<br><span style="color:var(--faint);font-size:10.5px">' +
+      esc(who) + ' · ' + esc(when) + '</span></span></label>';
+  }).join('');
+
+  showModal({
+    title: '⏪ Откат ' + full_name,
+    bodyHtml: '<div>Ветка <b>' + esc(branch) + '</b>. Выбери коммит — радар создаст новый коммит ' +
+      'с содержимым того момента. История сохранится, откат обратим.</div>' +
+      '<div class="flist">' + list + '</div>',
+    okText: 'ОТКАТИТЬ',
+    onOk: async (close) => {
+      const sel = document.querySelector('input[name="rc"]:checked');
+      if (!sel){ toast('Выбери коммит'); return; }
+      const c = commits[parseInt(sel.value, 10)];
+      const msg = (c.commit && c.commit.message ? c.commit.message.split('\n')[0] : '');
+      close();
+      await doRollback(full_name, branch, c.sha, msg);
+    }
+  });
+}
+
 /* ── СОХРАНИТЬ ВСЕ ОБНОВЛЁННЫЕ ── */
 async function saveChanged(){
   const targets = REPOS.filter(r => CHANGEDSET.has(r.full_name) && !SAVED.has(r.full_name));
