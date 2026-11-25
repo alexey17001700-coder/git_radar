@@ -364,18 +364,50 @@ async function api(path, token){
   return r.json();
 }
 
-/* ── ЗАПРОС НА ЗАПИСЬ (нужен write-токен) ── */
+/* ── ЗАПРОС НА ЗАПИСЬ ──
+   Сначала через прокси Штаба: ключ радара уже есть, отдельный токен НЕ нужен —
+   запись в GitHub делает сервер своим токеном. Прокси недоступен — падаем
+   на прямой запрос с токеном на запись (запасной путь). */
 async function writeApi(path, method, body){
-  const token = ($('writeToken') ? $('writeToken').value : '').trim() || store.get(K.writeToken, '');
-  if (!token) throw new Error('нужен токен на запись');
   const m = method || 'GET';
-  const headers = { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + token };
-  const opts = { method: m, headers };
+  const key = ((($('token') && $('token').value) || store.get(K.token, '') || '') + '').trim();
+  const opts = { method: m, headers: {} };
   if (body !== undefined && body !== null){
-    headers['Content-Type'] = 'application/json';
+    opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
-  const r = await fetch('https://api.github.com' + path, opts);
+
+  // 1) через прокси Штаба — токен GitHub остаётся на сервере
+  if (key){
+    try {
+      const pr = await fetch(SHTAB_PROXY + path, {
+        method: m,
+        headers: Object.assign({ 'X-Gitradar-Token': key }, opts.headers),
+        body: opts.body
+      });
+      log(m + ' ' + path + ' → ' + pr.status + ' (Штаб)', pr.ok ? 'ok' : 'err');
+      if (pr.ok) return pr.status === 204 ? {} : pr.json();
+      if (pr.status === 401) throw new Error('ключ радара неверный');
+      if (pr.status === 403) throw new Error('прокси Штаба: путь запрещён');
+      if (pr.status === 500) throw new Error('на сервере Штаба не задан GITRADAR_TOKEN');
+      let msg = '';
+      try { const j = await pr.json(); msg = (j && (j.message || j.error)) ? (j.message || j.error) : ''; } catch(e){}
+      throw new Error('HTTP ' + pr.status + (msg ? ' — ' + msg : ''));
+    } catch(e){
+      if (e && e.message && !/Failed to fetch|NetworkError|Load failed|fetch/i.test(e.message)) throw e;
+    }
+  }
+
+  // 2) напрямую с токеном на запись (запасной путь)
+  const token = ((($('writeToken') && $('writeToken').value) || store.get(K.writeToken, '') || '') + '').trim();
+  if (!token) throw new Error('нужен ключ радара или токен на запись');
+  const headers = { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + token };
+  const opts2 = { method: m, headers };
+  if (body !== undefined && body !== null){
+    headers['Content-Type'] = 'application/json';
+    opts2.body = JSON.stringify(body);
+  }
+  const r = await fetch('https://api.github.com' + path, opts2);
   log(m + ' ' + path + ' → ' + r.status, r.ok ? 'ok' : 'err');
   if (r.status === 404) throw new Error('404 — не найдено: ' + path);
   if (r.status === 422){
