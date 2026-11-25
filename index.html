@@ -1124,6 +1124,7 @@ $('list').addEventListener('click', e => {
     if (r) saveSnapshot(r).catch(() => {});
   }
   if (b.dataset.restore) restoreSnapshot(b.dataset.restore).catch(() => {});
+  if (b.dataset.file) restoreFile(b.dataset.file).catch(() => {});
   if (b.dataset.read){
     const read = new Set(store.get(K.read, []));
     read.add(b.dataset.read);
