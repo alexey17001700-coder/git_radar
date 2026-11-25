@@ -1232,6 +1232,7 @@ $('list').addEventListener('click', e => {
   }
   if (b.dataset.restore) restoreSnapshot(b.dataset.restore).catch(() => {});
   if (b.dataset.file) restoreFile(b.dataset.file).catch(() => {});
+  if (b.dataset.rollback) rollbackToCommit(b.dataset.rollback).catch(() => {});
   if (b.dataset.read){
     const read = new Set(store.get(K.read, []));
     read.add(b.dataset.read);
