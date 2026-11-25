@@ -1064,14 +1064,25 @@ async function restoreFile(full_name){
 
 /* ═══════════════ ОТКАТ ДО КОММИТА ═══════════════ */
 
-/* ── список коммитов ветки ── */
-async function listCommits(full, branch){
+/* ── список коммитов ветки (по 100 за раз, с подгрузкой) ── */
+async function listCommits(full, branch, page){
   const [owner, repo] = full.split('/');
   const path = '/repos/' + owner + '/' + repo + '/commits?sha=' +
-    encodeURIComponent(branch) + '&per_page=30';
+    encodeURIComponent(branch) + '&per_page=100&page=' + (page || 1);
   const arr = await writeApi(path, 'GET');
   return Array.isArray(arr) ? arr : [];
 }
+
+/* ── файлы коммита: есть ли в нём папка lib/ (код приложения) ── */
+async function commitFiles(full, sha){
+  const [owner, repo] = full.split('/');
+  const t = await writeApi('/repos/' + owner + '/' + repo +
+    '/git/trees/' + sha + '?recursive=1');
+  return (t && t.tree) ? t.tree.filter(x => x.type === 'blob') : [];
+}
+
+/* состояние окна отката */
+let RB = null;
 
 /* ── откат: новый коммит с деревом выбранного коммита ──
    История НЕ переписывается: поверх головы ветки создаётся новый
