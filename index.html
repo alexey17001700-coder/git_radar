@@ -1153,37 +1153,51 @@ async function rollbackToCommit(full_name){
   const r = REPOS.find(x => x.full_name === full_name);
   const branch = (r && r.default_branch) || 'main';
   let commits;
-  try { commits = await listCommits(full_name, branch); }
+  try { commits = await listCommits(full_name, branch, 1); }
   catch(e){ log('Не получил коммиты: ' + e.message, 'err'); toast('Ошибка: ' + e.message); return; }
   if (!commits.length){ toast('Коммитов нет'); return; }
 
-  const list = commits.map((c, i) => {
+  RB = { full: full_name, branch, commits, page: 1, done: commits.length < 100 };
+  log('Коммитов получено: ' + commits.length, 'ok');
+
+  showModal({
+    title: '⏪ Откат ' + full_name,
+    bodyHtml: '<div>Ветка <b>' + esc(branch) + '</b> · показано <b id="rbCount">' +
+      commits.length + '</b> коммитов. Выбери коммит — радар создаст новый коммит ' +
+      'с содержимым того момента. История сохранится, откат обратим.</div>' +
+      '<div class="hint" style="margin:8px 0">Кнопка <b>📄</b> у коммита — показать его файлы: ' +
+      'видно, есть ли там папка <b>lib/</b> с кодом приложения.</div>' +
+      '<div class="flist" id="rbList">' + rbList() + '</div>' +
+      '<button class="b-dark full mt" id="rbMore"' +
+      (RB.done ? ' style="display:none"' : '') + '>ПОКАЗАТЬ ЕЩЁ 100</button>',
+    okText: 'ОТКАТИТЬ',
+    onOk: async (close) => {
+      const sel = document.querySelector('input[name="rc"]:checked');
+      if (!sel){ toast('Выбери коммит'); return; }
+      const c = RB.commits[parseInt(sel.value, 10)];
+      const msg = (c.commit && c.commit.message ? c.commit.message.split('\n')[0] : '');
+      close();
+      await doRollback(full_name, branch, c.sha, msg);
+    }
+  });
+}
+
+/* ── разметка списка коммитов ── */
+function rbList(){
+  if (!RB) return '';
+  return RB.commits.map((c, i) => {
     const sha = c.sha || '';
     const msg = (c.commit && c.commit.message ? c.commit.message.split('\n')[0] : '(без сообщения)');
     const who = (c.commit && c.commit.author && c.commit.author.name) || '';
     const when = (c.commit && c.commit.author && c.commit.author.date)
       ? new Date(c.commit.author.date).toLocaleString('ru-RU') : '';
     return '<label><input type="radio" name="rc" value="' + i + '">' +
-      '<span><b>' + esc(sha.slice(0,7)) + '</b> · ' + esc(msg) +
+      '<span style="flex:1;min-width:0"><b>' + esc(sha.slice(0,7)) + '</b> · ' + esc(msg) +
       '<br><span style="color:var(--faint);font-size:10.5px">' +
-      esc(who) + ' · ' + esc(when) + '</span></span></label>';
+      esc(who) + ' · ' + esc(when) + '</span></span>' +
+      '<button class="b-dark b-sm" data-files="' + i + '" style="flex:0 0 auto">📄</button>' +
+      '</label>';
   }).join('');
-
-  showModal({
-    title: '⏪ Откат ' + full_name,
-    bodyHtml: '<div>Ветка <b>' + esc(branch) + '</b>. Выбери коммит — радар создаст новый коммит ' +
-      'с содержимым того момента. История сохранится, откат обратим.</div>' +
-      '<div class="flist">' + list + '</div>',
-    okText: 'ОТКАТИТЬ',
-    onOk: async (close) => {
-      const sel = document.querySelector('input[name="rc"]:checked');
-      if (!sel){ toast('Выбери коммит'); return; }
-      const c = commits[parseInt(sel.value, 10)];
-      const msg = (c.commit && c.commit.message ? c.commit.message.split('\n')[0] : '');
-      close();
-      await doRollback(full_name, branch, c.sha, msg);
-    }
-  });
 }
 
 /* ── СОХРАНИТЬ ВСЕ ОБНОВЛЁННЫЕ ── */
