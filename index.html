@@ -180,11 +180,11 @@
   <input id="user" placeholder="логин GitHub" autocomplete="off" autocapitalize="off" spellcheck="false">
   <div class="lbl mt" style="margin-top:12px">Ключ радара (от Штаба)</div>
   <input id="token" type="password" placeholder="ключ радара — читает репозитории через Штаб" autocomplete="off">
-  <div class="lbl mt">Токен на запись (для восстановления на GitHub)</div>
-  <input id="writeToken" type="password" placeholder="ghp_... — нужен только для restore" autocomplete="off">
-  <div class="hint" style="color:var(--red)">
-    ⚠ Токен с правом Contents: Read and write. Создавай fine-grained, только на нужный репозиторий.
-    Хранится в этом браузере. Не давай чужим устройствам.
+  <div class="lbl mt">Токен на запись (не обязателен)</div>
+  <input id="writeToken" type="password" placeholder="оставь пустым — откат идёт через Штаб" autocomplete="off">
+  <div class="hint">
+    Откат до коммита и восстановление файлов работают через Штаб — отдельный токен НЕ нужен.
+    Поле оставь пустым. Токен понадобится только если прокси Штаба недоступен.
   </div>
   <div class="row mt">
     <button class="b-gold" id="save">СОХРАНИТЬ</button>
