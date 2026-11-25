@@ -556,7 +556,7 @@ function esc(s){
 function render(){
   const read = new Set(store.get(K.read, []));
   const q = $('filter').value.trim().toLowerCase();
-  const hasWrite = !!((($('writeToken') && $('writeToken').value) || store.get(K.writeToken, '') || '').trim());
+  const hasWrite = !!((($('writeToken') && $('writeToken').value) || store.get(K.writeToken, '') || ($('token') && $('token').value) || store.get(K.token, '') || '').trim());
 
   // новые и непрочитанные
   const unread = REPOS.filter(r => NEWSET.has(r.full_name) && !read.has(r.full_name));
