@@ -1111,9 +1111,11 @@ async function doRollback(full, branch, sha, label){
 
 /* ── окно выбора коммита ── */
 async function rollbackToCommit(full_name){
-  // токена на запись нет — просим его прямо здесь
+  // ключ радара есть — откат идёт через Штаб, отдельный токен НЕ нужен.
+  // нет ни ключа, ни токена — просим токен прямо здесь.
+  const rk = ((($('token') && $('token').value) || store.get(K.token, '') || '') + '').trim();
   const wt = ((($('writeToken') && $('writeToken').value) || store.get(K.writeToken, '') || '') + '').trim();
-  if (!wt){
+  if (!rk && !wt){
     showModal({
       title: '🔑 Нужен токен на запись',
       bodyHtml: '<div>Для отката нужен токен GitHub с правом <b>Contents: Read and write</b> ' +
