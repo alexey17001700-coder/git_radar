@@ -589,6 +589,7 @@ function render(){
         '<button class="b-dark b-sm" data-save="' + esc(r.full_name) + '" data-nm="' + esc(r.name) + '">💾 СОХРАНИТЬ</button>' +
         (snap ? '<button class="b-ghost b-sm" data-restore="' + esc(r.full_name) + '">↺ ВОССТАНОВИТЬ</button>' : '') +
         (snap && hasWrite ? '<button class="b-ghost b-sm" data-file="' + esc(r.full_name) + '">📄 ФАЙЛ</button>' : '') +
+        (hasWrite ? '<button class="b-ghost b-sm" data-rollback="' + esc(r.full_name) + '">⏪ ОТКАТ</button>' : '') +
         '<button class="b-dark b-sm" data-open="' + esc(r.html_url) + '">GITHUB</button>' +
         (isNew ? '<button class="b-ghost b-sm" data-read="' + esc(r.full_name) + '">✓</button>' : '') +
       '</div>' +
