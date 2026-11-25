@@ -1079,6 +1079,32 @@ async function doRollback(full, branch, sha, label){
 
 /* ── окно выбора коммита ── */
 async function rollbackToCommit(full_name){
+  // токена на запись нет — просим его прямо здесь
+  const wt = ((($('writeToken') && $('writeToken').value) || store.get(K.writeToken, '') || '') + '').trim();
+  if (!wt){
+    showModal({
+      title: '🔑 Нужен токен на запись',
+      bodyHtml: '<div>Для отката нужен токен GitHub с правом <b>Contents: Read and write</b> ' +
+        '(fine-grained, только на этот репозиторий).</div>' +
+        '<div style="margin-top:10px"><input id="wtInp" type="password" placeholder="ghp_..." ' +
+        'style="width:100%" autocomplete="off"></div>' +
+        '<div style="margin-top:8px;color:var(--faint);font-size:10.5px">' +
+        'Токен сохранится только в этом браузере.</div>',
+      okText: 'СОХРАНИТЬ',
+      onOk: async (close) => {
+        const v = (($('wtInp') && $('wtInp').value) || '').trim();
+        if (!v){ toast('Введи токен'); return; }
+        store.set(K.writeToken, v);
+        if ($('writeToken')) $('writeToken').value = v;
+        close();
+        log('Токен на запись сохранён', 'ok');
+        toast('🔑 Токен сохранён');
+        render();
+        await rollbackToCommit(full_name);
+      }
+    });
+    return;
+  }
   const r = REPOS.find(x => x.full_name === full_name);
   const branch = (r && r.default_branch) || 'main';
   let commits;
