@@ -869,6 +869,7 @@ function save(){
   const prev = store.get(K.user, '');
   store.set(K.user, u);
   store.set(K.token, $('token').value.trim());
+  store.set(K.writeToken, $('writeToken').value.trim());
   if (prev !== u){
     // сменился владелец — сбрасываем историю
     store.set(K.known, null);
