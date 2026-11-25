@@ -879,6 +879,134 @@ async function restoreSnapshot(full_name){
   toast('↺ ' + rec.name + ' от ' + stamp);
 }
 
+/* ═══════════════ ВОССТАНОВЛЕНИЕ НА GITHUB ═══════════════ */
+
+/* ── МОДАЛКА ── */
+function showModal({ title, bodyHtml, onOk, okText }){
+  $('modalTitle').textContent = title || '';
+  $('modalBody').innerHTML = bodyHtml || '';
+  const ok = $('modalOk');
+  ok.textContent = okText || 'ПОДТВЕРДИТЬ';
+  ok.disabled = false;
+  const close = () => { $('modal').style.display = 'none'; ok.onclick = null; };
+  ok.onclick = async () => {
+    try { await onOk(close); }
+    catch(e){ log('Ошибка: ' + e.message, 'err'); toast('Ошибка: ' + e.message); }
+  };
+  $('modalCancel').onclick = close;
+  $('modal').style.display = 'flex';
+  return { close, ok };
+}
+
+/* ── base64 из Uint8Array ── */
+function b64(u8){
+  let s = '';
+  const CH = 0x8000;
+  for (let i = 0; i < u8.length; i += CH){
+    s += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+  }
+  return btoa(s);
+}
+
+/* ── РАСПАКОВКА ZIP (свой парсер, без библиотек) ── */
+async function unzip(blob){
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  const dv = new DataView(buf.buffer);
+  let eocd = -1;
+  const min = Math.max(0, buf.length - 65558);
+  for (let i = buf.length - 22; i >= min; i--){
+    if (dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('не ZIP: не найден конец каталога');
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const out = [];
+  for (let n = 0; n < count; n++){
+    if (dv.getUint32(off, true) !== 0x02014b50) throw new Error('битый каталог ZIP');
+    const method   = dv.getUint16(off + 10, true);
+    const compSize = dv.getUint32(off + 20, true);
+    const nameLen  = dv.getUint16(off + 28, true);
+    const extraLen = dv.getUint16(off + 30, true);
+    const cmtLen   = dv.getUint16(off + 32, true);
+    const localOff = dv.getUint32(off + 42, true);
+    const name = new TextDecoder().decode(buf.subarray(off + 46, off + 46 + nameLen));
+    off += 46 + nameLen + extraLen + cmtLen;
+    if (name.endsWith('/')) continue;
+    if (dv.getUint32(localOff, true) !== 0x04034b50) throw new Error('битый local header: ' + name);
+    const lNameLen  = dv.getUint16(localOff + 26, true);
+    const lExtraLen = dv.getUint16(localOff + 28, true);
+    const start = localOff + 30 + lNameLen + lExtraLen;
+    const raw = buf.subarray(start, start + compSize);
+    let data;
+    if (method === 0) data = raw;
+    else if (method === 8){
+      const ds = new DecompressionStream('deflate-raw');
+      const st = new Blob([raw]).stream().pipeThrough(ds);
+      data = new Uint8Array(await new Response(st).arrayBuffer());
+    } else throw new Error('метод сжатия ' + method + ' не поддержан: ' + name);
+    out.push({ path: name, data });
+  }
+  return out;
+}
+
+/* ── убрать верхнюю папку GitHub-архива (repo-branch/) ── */
+function stripRoot(files){
+  if (!files.length) return files;
+  const first = String(files[0].path || '').split('/')[0];
+  if (!first) return files;
+  const all = files.every(f => String(f.path).startsWith(first + '/'));
+  if (!all) return files;
+  return files.map(f => ({ path: f.path.slice(first.length + 1), data: f.data }));
+}
+
+/* ── записать один файл в репозиторий ── */
+async function putFile(full, branch, path, data){
+  const [owner, repo] = full.split('/');
+  const enc = path.split('/').map(encodeURIComponent).join('/');
+  const base = '/repos/' + owner + '/' + repo + '/contents/' + enc;
+  let sha = null;
+  try {
+    const cur = await writeApi(base + '?ref=' + encodeURIComponent(branch));
+    sha = cur && cur.sha ? cur.sha : null;
+  } catch(e){
+    if (!/404/.test(e.message)) throw e;
+  }
+  const body = { message: 'restore: ' + path, content: b64(data), branch };
+  if (sha) body.sha = sha;
+  await writeApi(base, 'PUT', body);
+  log('✅ Файл восстановлен: ' + path, 'ok');
+  toast('✅ ' + path);
+}
+
+/* ── ВОССТАНОВИТЬ ОДИН ФАЙЛ ИЗ СНИМКА ── */
+async function restoreFile(full_name){
+  const rec = await dbGet(full_name);
+  if (!rec){ toast('Нет снимка'); return; }
+  const r = REPOS.find(x => x.full_name === full_name);
+  const branch = (r && r.default_branch) || 'main';
+  log('Распаковываю снимок ' + full_name + '...', 'hi');
+  let files;
+  try { files = stripRoot(await unzip(rec.blob)); }
+  catch(e){ log('ZIP не распакован: ' + e.message, 'err'); toast('Ошибка ZIP: ' + e.message); return; }
+  if (!files.length){ toast('В снимке нет файлов'); return; }
+  const stamp = String(rec.saved_at || '').slice(0, 10);
+  const list = files.map((f, i) =>
+    '<label><input type="radio" name="rf" value="' + i + '">' + esc(f.path) + '</label>').join('');
+  showModal({
+    title: '📄 Восстановить файл в ' + full_name,
+    bodyHtml: '<div>Снимок от ' + esc(stamp) + ' · ветка ' + esc(branch) + '</div>' +
+              '<div class="flist">' + list + '</div>',
+    okText: 'ВОССТАНОВИТЬ',
+    onOk: async (close) => {
+      const sel = document.querySelector('input[name="rf"]:checked');
+      if (!sel){ toast('Выбери файл'); return; }
+      const f = files[parseInt(sel.value, 10)];
+      close();
+      await putFile(full_name, branch, f.path, f.data);
+    }
+  });
+}
+
 /* ── СОХРАНИТЬ ВСЕ ОБНОВЛЁННЫЕ ── */
 async function saveChanged(){
   const targets = REPOS.filter(r => CHANGEDSET.has(r.full_name) && !SAVED.has(r.full_name));
