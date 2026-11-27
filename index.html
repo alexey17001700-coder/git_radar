@@ -913,6 +913,8 @@ function openSheet(full){
   $('shSub').textContent = r.full_name + ' · ветка ' + br;
 
   const o = [];
+  if (shareOk()) o.push(opt('📤', 'Сохранить в папку…',
+    'Меню системы: Files, Диск, облако — выбираешь любую папку', 'share', zip, r.name));
   o.push(opt('⬇', 'В «Загрузки»', 'Обычное скачивание браузером', 'blob', zip, r.name));
   if (DIR) o.push(opt('📂', 'В папку «' + DIR.name + '»', 'Сразу в выбранную папку, без диалога', 'dir', zip, r.name));
   if (FS_OK) o.push(opt('🗂', DIR ? 'Выбрать другую папку' : 'Выбрать папку', 'Сохранить в папку на устройстве', 'pickdir', zip, r.name));
