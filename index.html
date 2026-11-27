@@ -782,16 +782,21 @@ async function pickDir(){
   }
 }
 
-/* ── Сохранить прямо в выбранную папку ── */
+/* ── Сохранить прямо в выбранную папку ──
+   Пишем в handle напрямую — БЕЗ диалогов «куда скачать».
+   Если браузер не умеет createWritable (часть Android-браузеров),
+   честно говорим об этом, а не роняем файл в «Загрузки». */
 async function saveToDir(url, name){
   if (!DIR) throw new Error('папка не выбрана');
   let p = await DIR.queryPermission({ mode: 'readwrite' });
   if (p !== 'granted') p = await DIR.requestPermission({ mode: 'readwrite' });
   if (p !== 'granted') throw new Error('нет доступа к папке');
+  const fh = await DIR.getFileHandle(name + '.zip', { create: true });
+  if (typeof fh.createWritable !== 'function')
+    throw new Error('браузер не умеет писать в папку (нет createWritable)');
   const r = await fetch(url);
   if (!r.ok) throw new Error('HTTP ' + r.status);
   const blob = await r.blob();
-  const fh = await DIR.getFileHandle(name + '.zip', { create: true });
   const w = await fh.createWritable();
   await w.write(blob);
   await w.close();
