@@ -837,7 +837,23 @@ async function download(url, name, mode){
     try { await saveAs(url, name); log('Готово: ' + name + '.zip', 'ok'); return; }
     catch (e){
       if (e && e.name === 'AbortError'){ log('Сохранение отменено', 'err'); return; }
+      // на телефоне «Сохранить как» браузер не умеет — отдаём файл системе
+      if (shareOk()){
+        try { await shareFile(url, name); log('Готово: отдал системе — ' + name + '.zip', 'ok'); return; }
+        catch (e2){
+          if (e2 && e2.name === 'AbortError'){ log('Сохранение отменено', 'err'); return; }
+          log('Система не приняла (' + e2.message + ')', 'err');
+        }
+      }
       log('Не вышло (' + e.message + '), кладу в «Загрузки»', 'err');
+    }
+  }
+
+  if (mode === 'share'){
+    try { await shareFile(url, name); log('Готово: ' + name + '.zip (через систему)', 'ok'); return; }
+    catch (e){
+      if (e && e.name === 'AbortError'){ log('Сохранение отменено', 'err'); return; }
+      log('Система не приняла (' + e.message + '), кладу в «Загрузки»', 'err');
     }
   }
 
