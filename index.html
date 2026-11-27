@@ -843,7 +843,18 @@ async function download(url, name, mode){
 
   if (mode === 'dir'){
     try { await saveToDir(url, name); log('Готово: ' + name + '.zip → «' + DIR.name + '»', 'ok'); return; }
-    catch (e){ log('Папка не приняла (' + e.message + '), кладу в «Загрузки»', 'err'); }
+    catch (e){
+      log('Папка не приняла (' + e.message + ')', 'err');
+      // Папка не сработала — отдаём файл СИСТЕМЕ, чтобы ты сам выбрал папку.
+      // НЕ роняем в «Загрузки»: именно там браузер задаёт лишний вопрос «куда скачать».
+      if (shareOk()){
+        try { await shareFile(url, name); log('Готово: отдал системе — ' + name + '.zip', 'ok'); return; }
+        catch (e2){
+          if (e2 && e2.name === 'AbortError'){ log('Сохранение отменено', 'err'); return; }
+          log('Система не приняла (' + e2.message + ')', 'err');
+        }
+      }
+    }
   }
 
   if (mode === 'as'){
