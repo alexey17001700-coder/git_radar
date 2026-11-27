@@ -742,9 +742,15 @@ function showDir(){
   const box = $('dirBox'), hint = $('dirHint'), btn = $('pickDir');
   if (DIR){ box.style.display = 'flex'; $('dirName').textContent = DIR.name; }
   else box.style.display = 'none';
-  if (!FS_OK){ btn.disabled = true; hint.style.display = 'block'; }
-  else { btn.disabled = false; hint.style.display = 'none'; }
-  btn.textContent = DIR ? '📁 СМЕНИТЬ ПАПКУ' : '📁 ПАПКА ДЛЯ СКАЧИВАНИЯ';
+  if (!FS_OK){
+    btn.disabled = true;
+    hint.style.display = 'block';
+    btn.textContent = shareOk() ? '📁 ПАПКА — ЖМИ «📁 КУДА»' : '📁 ПАПКА — ТОЛЬКО НА ПК';
+  } else {
+    btn.disabled = false;
+    hint.style.display = 'none';
+    btn.textContent = DIR ? '📁 СМЕНИТЬ ПАПКУ' : '📁 ПАПКА ДЛЯ СКАЧИВАНИЯ';
+  }
 }
 
 /* ── Восстановить папку после перезагрузки страницы ── */
