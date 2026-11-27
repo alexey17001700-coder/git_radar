@@ -823,6 +823,7 @@ async function download(url, name, mode){
   if (mode === 'auto') mode = DIR ? 'dir' : 'blob';
   const where = mode === 'dir' ? 'папка «' + (DIR ? DIR.name : '') + '»'
               : mode === 'as'  ? 'выбор места'
+              : mode === 'share' ? 'через меню системы'
               : '«Загрузки»';
   log('Скачиваю: ' + name + ' → ' + where, 'hi');
   toast('⬇ ' + name + '.zip');
