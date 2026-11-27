@@ -1322,6 +1322,7 @@ $('sheet').addEventListener('click', async e => {
   const act = b.dataset.act, url = b.dataset.url, nm = b.dataset.nm;
   closeSheet();
   if (act === 'blob')    download(url, nm, 'blob').catch(() => {});
+  if (act === 'share')   download(url, nm, 'share').catch(() => {});
   if (act === 'dir')     download(url, nm, 'dir').catch(() => {});
   if (act === 'as')      download(url, nm, 'as').catch(() => {});
   if (act === 'pickdir'){ await pickDir(); if (DIR) download(url, nm, 'dir').catch(() => {}); }
