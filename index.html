@@ -636,6 +636,11 @@ function render(){
 /* ═══════════════ КУДА СКАЧИВАТЬ ═══════════════ */
 const FS_OK = typeof window.showDirectoryPicker === 'function';
 const SAVEAS_OK = typeof window.showSaveFilePicker === 'function';
+/* На Android выбор папки браузеру недоступен вообще. Зато есть системное
+   «Поделиться» — через него файл можно положить в ЛЮБУЮ папку (Files, Диск, облако). */
+function shareOk(){
+  return !!(navigator.canShare && navigator.share);
+}
 let DIR = null;   // выбранная папка (FileSystemDirectoryHandle)
 
 /* ── IndexedDB: папка + снимки версий ── */
